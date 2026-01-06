@@ -1,0 +1,615 @@
+"""
+Multi-Site Scraper Suite
+Scrapes company and project data from multiple sources
+"""
+
+import requests
+import time
+import json
+import csv
+import logging
+from datetime import datetime
+from typing import List, Dict, Optional
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin, quote
+import re
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+class BaseScraper:
+    """Base class for all scrapers"""
+    
+    HEADERS = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+    }
+    
+    def __init__(self, delay: float = 1.0):
+        self.delay = delay
+        self.session = requests.Session()
+        self.session.headers.update(self.HEADERS)
+        self.data = []
+    
+    def save_to_json(self, filename: str):
+        """Save data to JSON"""
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(self.data, f, indent=2, ensure_ascii=False)
+        logger.info(f"✓ Saved {len(self.data)} items to {filename}")
+    
+    def save_to_csv(self, filename: str):
+        """Save data to CSV"""
+        if not self.data:
+            return
+        with open(filename, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=self.data[0].keys())
+            writer.writeheader()
+            writer.writerows(self.data)
+        logger.info(f"✓ Saved {len(self.data)} items to {filename}")
+
+
+class ProductHuntScraper(BaseScraper):
+    """Scraper for Product Hunt - trending products and launches"""
+    
+    BASE_URL = "https://www.producthunt.com"
+    
+    def scrape_products(self, days: int = 7, limit: Optional[int] = None) -> List[Dict]:
+        """
+        Scrape trending products from Product Hunt
+        
+        Args:
+            days: Number of days to look back (default 7)
+            limit: Maximum number of products to scrape
+        """
+        logger.info(f"Scraping Product Hunt (last {days} days)...")
+        products = []
+        
+        try:
+            # Product Hunt API endpoint (public)
+            api_url = f"{self.BASE_URL}/api/graphql"
+            
+            # Try web scraping approach
+            for day_offset in range(days):
+                if limit and len(products) >= limit:
+                    break
+                
+                # Calculate date
+                from datetime import timedelta
+                date = datetime.now() - timedelta(days=day_offset)
+                date_str = date.strftime("%Y-%m-%d")
+                
+                url = f"{self.BASE_URL}/posts/{date_str}"
+                logger.info(f"  Scraping {date_str}...")
+                
+                response = self.session.get(url, timeout=10)
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # Find product cards
+                product_cards = soup.find_all('div', {'data-test': 'post-item'})
+                
+                for card in product_cards:
+                    try:
+                        product = self._parse_product(card, date_str)
+                        if product:
+                            products.append(product)
+                            logger.info(f"    Scraped: {product['name']}")
+                        
+                        if limit and len(products) >= limit:
+                            break
+                    except Exception as e:
+                        logger.warning(f"Failed to parse product: {e}")
+                
+                time.sleep(self.delay)
+            
+            self.data = products
+            logger.info(f"✓ Scraped {len(products)} products from Product Hunt")
+            return products
+            
+        except Exception as e:
+            logger.error(f"Product Hunt scraping failed: {e}")
+            return []
+    
+    def _parse_product(self, card, date: str) -> Optional[Dict]:
+        """Parse product data from card element"""
+        try:
+            name_elem = card.find(['h3', 'a'])
+            name = name_elem.get_text(strip=True) if name_elem else ''
+            
+            tagline_elem = card.find('p')
+            tagline = tagline_elem.get_text(strip=True) if tagline_elem else ''
+            
+            link = card.find('a', href=True)
+            url = urljoin(self.BASE_URL, link['href']) if link else ''
+            
+            # Upvotes
+            upvote_elem = card.find(text=re.compile(r'\d+'))
+            upvotes = int(re.search(r'\d+', upvote_elem).group()) if upvote_elem else 0
+            
+            return {
+                'name': name,
+                'tagline': tagline,
+                'url': url,
+                'upvotes': upvotes,
+                'date': date,
+                'source': 'ProductHunt',
+                'scraped_at': datetime.now().isoformat(),
+            }
+        except:
+            return None
+
+
+class CrunchbaseScraper(BaseScraper):
+    """Scraper for Crunchbase - company and funding data"""
+    
+    BASE_URL = "https://www.crunchbase.com"
+    
+    def scrape_companies(self, category: str = 'artificial-intelligence', 
+                        limit: Optional[int] = 50) -> List[Dict]:
+        """
+        Scrape companies from Crunchbase
+        
+        Args:
+            category: Category/industry to scrape
+            limit: Maximum number of companies
+        """
+        logger.info(f"Scraping Crunchbase ({category})...")
+        companies = []
+        
+        try:
+            # Crunchbase has strong anti-scraping, this is a basic example
+            url = f"{self.BASE_URL}/discover/organization.companies/{category}"
+            
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Find company cards
+            company_cards = soup.find_all(['div', 'a'], class_=lambda x: x and 'identifier' in str(x).lower())
+            
+            for card in company_cards[:limit]:
+                try:
+                    company = self._parse_company(card)
+                    if company:
+                        companies.append(company)
+                        logger.info(f"  Scraped: {company['name']}")
+                except Exception as e:
+                    logger.warning(f"Failed to parse company: {e}")
+                
+                time.sleep(self.delay)
+            
+            self.data = companies
+            logger.info(f"✓ Scraped {len(companies)} companies from Crunchbase")
+            return companies
+            
+        except Exception as e:
+            logger.error(f"Crunchbase scraping failed: {e}")
+            return []
+    
+    def _parse_company(self, card) -> Optional[Dict]:
+        """Parse company data"""
+        try:
+            name = card.get_text(strip=True)
+            link = card.get('href', '')
+            url = urljoin(self.BASE_URL, link) if link else ''
+            
+            return {
+                'name': name,
+                'url': url,
+                'source': 'Crunchbase',
+                'scraped_at': datetime.now().isoformat(),
+            }
+        except:
+            return None
+
+
+class GitHubTrendingScraper(BaseScraper):
+    """Scraper for GitHub Trending - trending repositories and projects"""
+    
+    BASE_URL = "https://github.com"
+    
+    def scrape_trending(self, language: str = '', 
+                       timeframe: str = 'daily', 
+                       limit: Optional[int] = 25) -> List[Dict]:
+        """
+        Scrape trending GitHub repositories
+        
+        Args:
+            language: Programming language filter (empty for all)
+            timeframe: 'daily', 'weekly', or 'monthly'
+            limit: Maximum number of repos
+        """
+        logger.info(f"Scraping GitHub Trending ({timeframe}, {language or 'all languages'})...")
+        repos = []
+        
+        try:
+            url = f"{self.BASE_URL}/trending"
+            if language:
+                url += f"/{language}"
+            url += f"?since={timeframe}"
+            
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Find repo articles
+            repo_articles = soup.find_all('article', class_='Box-row')
+            
+            for article in repo_articles[:limit]:
+                try:
+                    repo = self._parse_repo(article)
+                    if repo:
+                        repos.append(repo)
+                        logger.info(f"  Scraped: {repo['full_name']}")
+                except Exception as e:
+                    logger.warning(f"Failed to parse repo: {e}")
+            
+            self.data = repos
+            logger.info(f"✓ Scraped {len(repos)} repos from GitHub Trending")
+            return repos
+            
+        except Exception as e:
+            logger.error(f"GitHub Trending scraping failed: {e}")
+            return []
+    
+    def _parse_repo(self, article) -> Optional[Dict]:
+        """Parse repository data"""
+        try:
+            # Repo name and URL
+            h2 = article.find('h2')
+            link = h2.find('a') if h2 else None
+            
+            if not link:
+                return None
+            
+            full_name = link['href'].strip('/')
+            url = urljoin(self.BASE_URL, link['href'])
+            
+            # Description
+            desc_elem = article.find('p')
+            description = desc_elem.get_text(strip=True) if desc_elem else ''
+            
+            # Stars today
+            stars_elem = article.find('span', class_=lambda x: x and 'float-sm-right' in str(x))
+            stars_today = stars_elem.get_text(strip=True) if stars_elem else '0'
+            
+            # Language
+            lang_elem = article.find('span', attrs={'itemprop': 'programmingLanguage'})
+            language = lang_elem.get_text(strip=True) if lang_elem else ''
+            
+            # Total stars
+            star_elem = article.find('svg', class_='octicon-star')
+            total_stars = '0'
+            if star_elem and star_elem.parent:
+                total_stars = star_elem.parent.get_text(strip=True)
+            
+            return {
+                'full_name': full_name,
+                'url': url,
+                'description': description,
+                'language': language,
+                'stars_today': stars_today,
+                'total_stars': total_stars,
+                'source': 'GitHub',
+                'scraped_at': datetime.now().isoformat(),
+            }
+        except Exception as e:
+            logger.warning(f"Parse error: {e}")
+            return None
+
+
+class HackerNewsScraper(BaseScraper):
+    """Scraper for Hacker News - trending tech news and Show HN posts"""
+    
+    BASE_URL = "https://news.ycombinator.com"
+    API_URL = "https://hacker-news.firebaseio.com/v0"
+    
+    def scrape_stories(self, story_type: str = 'top', limit: int = 30) -> List[Dict]:
+        """
+        Scrape Hacker News stories
+        
+        Args:
+            story_type: 'top', 'new', 'best', 'show', 'ask', 'job'
+            limit: Number of stories to fetch
+        """
+        logger.info(f"Scraping Hacker News ({story_type} stories)...")
+        stories = []
+        
+        try:
+            # Get story IDs
+            ids_url = f"{self.API_URL}/{story_type}stories.json"
+            response = self.session.get(ids_url, timeout=10)
+            response.raise_for_status()
+            story_ids = response.json()[:limit]
+            
+            # Fetch each story
+            for story_id in story_ids:
+                try:
+                    story_url = f"{self.API_URL}/item/{story_id}.json"
+                    response = self.session.get(story_url, timeout=10)
+                    story_data = response.json()
+                    
+                    if story_data:
+                        story = {
+                            'id': story_data.get('id'),
+                            'title': story_data.get('title', ''),
+                            'url': story_data.get('url', ''),
+                            'score': story_data.get('score', 0),
+                            'by': story_data.get('by', ''),
+                            'time': datetime.fromtimestamp(story_data.get('time', 0)).isoformat(),
+                            'descendants': story_data.get('descendants', 0),  # comment count
+                            'type': story_data.get('type', ''),
+                            'source': 'HackerNews',
+                            'scraped_at': datetime.now().isoformat(),
+                        }
+                        stories.append(story)
+                        logger.info(f"  Scraped: {story['title'][:50]}...")
+                    
+                    time.sleep(0.1)  # HN is nice, but be respectful
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to fetch story {story_id}: {e}")
+            
+            self.data = stories
+            logger.info(f"✓ Scraped {len(stories)} stories from Hacker News")
+            return stories
+            
+        except Exception as e:
+            logger.error(f"Hacker News scraping failed: {e}")
+            return []
+
+
+class IndieHackersScraper(BaseScraper):
+    """Scraper for Indie Hackers - indie projects and revenue data"""
+    
+    BASE_URL = "https://www.indiehackers.com"
+    
+    def scrape_products(self, sort: str = 'revenue', limit: int = 50) -> List[Dict]:
+        """
+        Scrape indie products
+        
+        Args:
+            sort: 'revenue', 'newest', 'following'
+            limit: Number of products
+        """
+        logger.info(f"Scraping Indie Hackers (sorted by {sort})...")
+        products = []
+        
+        try:
+            url = f"{self.BASE_URL}/products?sort={sort}"
+            
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Find product cards
+            product_cards = soup.find_all('div', class_=lambda x: x and 'product' in str(x).lower())
+            
+            for card in product_cards[:limit]:
+                try:
+                    product = self._parse_product(card)
+                    if product:
+                        products.append(product)
+                        logger.info(f"  Scraped: {product['name']}")
+                except Exception as e:
+                    logger.warning(f"Failed to parse product: {e}")
+            
+            self.data = products
+            logger.info(f"✓ Scraped {len(products)} products from Indie Hackers")
+            return products
+            
+        except Exception as e:
+            logger.error(f"Indie Hackers scraping failed: {e}")
+            return []
+    
+    def _parse_product(self, card) -> Optional[Dict]:
+        """Parse product data"""
+        try:
+            name_elem = card.find(['h2', 'h3', 'a'])
+            name = name_elem.get_text(strip=True) if name_elem else ''
+            
+            desc_elem = card.find('p')
+            description = desc_elem.get_text(strip=True) if desc_elem else ''
+            
+            link = card.find('a', href=True)
+            url = urljoin(self.BASE_URL, link['href']) if link else ''
+            
+            return {
+                'name': name,
+                'description': description,
+                'url': url,
+                'source': 'IndieHackers',
+                'scraped_at': datetime.now().isoformat(),
+            }
+        except:
+            return None
+
+
+class LinkedInJobsScraper(BaseScraper):
+    """Scraper for LinkedIn Jobs - job postings"""
+    
+    BASE_URL = "https://www.linkedin.com"
+    
+    def scrape_jobs(self, keywords: str, location: str = '', limit: int = 25) -> List[Dict]:
+        """
+        Scrape job postings (Note: LinkedIn has strong anti-scraping)
+        
+        Args:
+            keywords: Job search keywords
+            location: Location filter
+            limit: Number of jobs
+        """
+        logger.info(f"Scraping LinkedIn Jobs ({keywords})...")
+        jobs = []
+        
+        try:
+            params = {
+                'keywords': keywords,
+                'location': location,
+                'start': 0
+            }
+            
+            url = f"{self.BASE_URL}/jobs/search/?"
+            url += '&'.join([f"{k}={quote(str(v))}" for k, v in params.items()])
+            
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Find job cards
+            job_cards = soup.find_all('div', class_=lambda x: x and 'job' in str(x).lower())
+            
+            for card in job_cards[:limit]:
+                try:
+                    job = self._parse_job(card)
+                    if job:
+                        jobs.append(job)
+                        logger.info(f"  Scraped: {job['title']}")
+                except Exception as e:
+                    logger.warning(f"Failed to parse job: {e}")
+            
+            self.data = jobs
+            logger.info(f"✓ Scraped {len(jobs)} jobs from LinkedIn")
+            return jobs
+            
+        except Exception as e:
+            logger.error(f"LinkedIn scraping failed: {e}")
+            logger.warning("LinkedIn has strong anti-scraping. Consider using official API.")
+            return []
+    
+    def _parse_job(self, card) -> Optional[Dict]:
+        """Parse job posting"""
+        try:
+            title_elem = card.find(['h3', 'a'])
+            title = title_elem.get_text(strip=True) if title_elem else ''
+            
+            company_elem = card.find(['h4', 'span'], class_=lambda x: x and 'company' in str(x).lower())
+            company = company_elem.get_text(strip=True) if company_elem else ''
+            
+            location_elem = card.find('span', class_=lambda x: x and 'location' in str(x).lower())
+            location = location_elem.get_text(strip=True) if location_elem else ''
+            
+            link = card.find('a', href=True)
+            url = urljoin(self.BASE_URL, link['href']) if link else ''
+            
+            return {
+                'title': title,
+                'company': company,
+                'location': location,
+                'url': url,
+                'source': 'LinkedIn',
+                'scraped_at': datetime.now().isoformat(),
+            }
+        except:
+            return None
+
+
+class RemoteOKScraper(BaseScraper):
+    """Scraper for Remote OK - remote job listings"""
+    
+    BASE_URL = "https://remoteok.com"
+    API_URL = f"{BASE_URL}/api"
+    
+    def scrape_jobs(self, tag: str = '', limit: int = 50) -> List[Dict]:
+        """
+        Scrape remote jobs from Remote OK
+        
+        Args:
+            tag: Job category tag (e.g., 'dev', 'design', 'sales')
+            limit: Number of jobs
+        """
+        logger.info(f"Scraping Remote OK ({tag or 'all jobs'})...")
+        jobs = []
+        
+        try:
+            url = self.API_URL
+            if tag:
+                url += f"?tag={tag}"
+            
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            for job_data in data[:limit]:
+                if not isinstance(job_data, dict):
+                    continue
+                
+                job = {
+                    'position': job_data.get('position', ''),
+                    'company': job_data.get('company', ''),
+                    'location': job_data.get('location', 'Remote'),
+                    'tags': ', '.join(job_data.get('tags', [])),
+                    'url': job_data.get('url', ''),
+                    'salary': f"{job_data.get('salary_min', '')} - {job_data.get('salary_max', '')}",
+                    'date': job_data.get('date', ''),
+                    'source': 'RemoteOK',
+                    'scraped_at': datetime.now().isoformat(),
+                }
+                jobs.append(job)
+                logger.info(f"  Scraped: {job['position']} at {job['company']}")
+            
+            self.data = jobs
+            logger.info(f"✓ Scraped {len(jobs)} jobs from Remote OK")
+            return jobs
+            
+        except Exception as e:
+            logger.error(f"Remote OK scraping failed: {e}")
+            return []
+
+
+def main():
+    """Example usage of all scrapers"""
+    
+    print("=" * 60)
+    print("Multi-Site Scraper Suite")
+    print("=" * 60)
+    
+    # 1. Product Hunt
+    print("\n1. Scraping Product Hunt...")
+    ph = ProductHuntScraper(delay=1.0)
+    ph.scrape_products(days=3, limit=10)
+    ph.save_to_json('producthunt_products.json')
+    
+    # 2. GitHub Trending
+    print("\n2. Scraping GitHub Trending...")
+    gh = GitHubTrendingScraper(delay=1.0)
+    gh.scrape_trending(language='python', timeframe='daily', limit=15)
+    gh.save_to_json('github_trending.json')
+    
+    # 3. Hacker News
+    print("\n3. Scraping Hacker News...")
+    hn = HackerNewsScraper(delay=0.5)
+    hn.scrape_stories(story_type='top', limit=20)
+    hn.save_to_json('hackernews_stories.json')
+    
+    # 4. Remote OK
+    print("\n4. Scraping Remote OK...")
+    ro = RemoteOKScraper(delay=1.0)
+    ro.scrape_jobs(tag='dev', limit=25)
+    ro.save_to_json('remoteok_jobs.json')
+    
+    # 5. Indie Hackers
+    print("\n5. Scraping Indie Hackers...")
+    ih = IndieHackersScraper(delay=1.5)
+    ih.scrape_products(sort='revenue', limit=15)
+    ih.save_to_json('indiehackers_products.json')
+    
+    print("\n" + "=" * 60)
+    print("✓ All scraping complete!")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
