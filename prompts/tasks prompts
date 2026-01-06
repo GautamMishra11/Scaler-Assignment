@@ -1,0 +1,272 @@
+# Task Name Generation Prompts
+# Used by TaskGenerator to create realistic task names
+
+# ============================================================================
+# ENGINEERING TASKS
+# ============================================================================
+
+## Backend Engineering
+Generate a realistic backend engineering task name for a {team_type} team at a B2B SaaS company in the {industry} industry.
+
+Format: "[Component] - [Action] - [Detail]"
+
+Examples:
+- "API Gateway - Implement - Rate limiting for enterprise tier customers"
+- "Database - Optimize - Query performance for analytics dashboard"
+- "Auth Service - Debug - OAuth callback timeout issues on production"
+- "Payment Service - Add - Stripe webhook handling for subscription updates"
+- "Cache Layer - Refactor - Redis configuration for multi-region deployment"
+
+Requirements:
+- Use technical but realistic component names
+- Action verbs: Implement, Optimize, Debug, Refactor, Add, Fix, Update, Migrate
+- Include specific technical details
+- Keep under 80 characters
+
+Generate one task name:
+
+---
+
+## Frontend Engineering
+Generate a realistic frontend engineering task name for a {team_type} team.
+
+Format: "[Component/Feature] - [Action] - [Detail]"
+
+Examples:
+- "Dashboard - Implement - Real-time notifications with WebSocket"
+- "Search Bar - Add - Autocomplete with fuzzy matching"
+- "User Settings - Fix - Dark mode toggle state persistence"
+- "Charts - Optimize - Performance for large datasets (10k+ points)"
+- "Form Validation - Refactor - Use React Hook Form for better UX"
+
+Generate one task name:
+
+---
+
+## Mobile Engineering
+Generate a realistic mobile engineering task name for iOS or Android.
+
+Examples:
+- "Push Notifications - Implement - Rich notifications with action buttons"
+- "Camera Integration - Add - QR code scanner for document upload"
+- "Offline Mode - Debug - Sync conflicts with local SQLite database"
+- "Onboarding Flow - Update - New tutorial screens for v3.0"
+- "App Performance - Optimize - Reduce app launch time by 30%"
+
+Generate one task name:
+
+---
+
+## Infrastructure/DevOps
+Generate a realistic infrastructure or DevOps task name.
+
+Examples:
+- "Kubernetes - Migrate - Production workloads from ECS to EKS"
+- "CI/CD Pipeline - Add - Automated security scanning with Snyk"
+- "Monitoring - Implement - Custom Datadog dashboards for microservices"
+- "Terraform - Refactor - AWS infrastructure modules for staging env"
+- "Load Balancer - Configure - Auto-scaling policies for Black Friday"
+
+Generate one task name:
+
+---
+
+## Data Engineering
+Generate a realistic data engineering task name.
+
+Examples:
+- "ETL Pipeline - Build - Daily customer activity aggregation job"
+- "Data Warehouse - Optimize - Snowflake query performance (2hr+ queries)"
+- "Airflow DAG - Debug - Failed pipeline runs for revenue reporting"
+- "Data Quality - Add - Automated tests for user events schema"
+- "dbt Models - Refactor - User cohort analysis for product team"
+
+Generate one task name:
+
+---
+
+# ============================================================================
+# PRODUCT TASKS
+# ============================================================================
+
+## Product Management
+Generate a realistic product management task name.
+
+Format: "[Feature/Initiative] - [Action]"
+
+Examples:
+- "Enterprise Features Roadmap - Create - Q4 2024 planning doc"
+- "User Research - Conduct - 15 interviews with churned customers"
+- "Pricing Strategy - Analyze - Competitor pricing for new tier"
+- "Feature Specs - Write - Advanced search functionality PRD"
+- "Product Metrics - Review - Weekly dashboard with eng leads"
+
+Generate one task name:
+
+---
+
+# ============================================================================
+# DESIGN TASKS
+# ============================================================================
+
+## Product Design
+Generate a realistic product design task name.
+
+Examples:
+- "Settings Page - Design - New enterprise admin controls mockups"
+- "Mobile App - Prototype - Interactive onboarding flow in Figma"
+- "Design System - Update - Button components for accessibility"
+- "User Flow - Map - Payment checkout redesign journey"
+- "Usability Testing - Conduct - 8 sessions for new dashboard"
+
+Generate one task name:
+
+---
+
+# ============================================================================
+# MARKETING TASKS
+# ============================================================================
+
+## Content Marketing
+Generate a realistic content marketing task name.
+
+Format: "[Content Type] - [Action] - [Topic/Detail]"
+
+Examples:
+- "Blog Post - Write - 'How to Scale Your API Infrastructure'"
+- "Case Study - Create - Enterprise customer success story (Acme Corp)"
+- "Email Campaign - Design - Product launch announcement sequence"
+- "SEO - Optimize - Landing pages for target keywords (10 pages)"
+- "Webinar - Plan - Q4 product roadmap presentation for customers"
+
+Generate one task name:
+
+---
+
+## Demand Generation
+Generate a realistic demand generation task name.
+
+Examples:
+- "PPC Campaign - Launch - Google Ads for enterprise segment"
+- "Landing Page - A/B Test - Hero section variations for conversion"
+- "Lead Magnet - Create - API integration guide ebook"
+- "Event Sponsorship - Coordinate - AWS re:Invent booth planning"
+- "Attribution Model - Analyze - Multi-touch revenue tracking setup"
+
+Generate one task name:
+
+---
+
+# ============================================================================
+# SALES TASKS
+# ============================================================================
+
+## Sales
+Generate a realistic sales task name.
+
+Examples:
+- "Enterprise Deal - Close - Acme Corp 500-seat contract ($250K ARR)"
+- "Proposal - Send - Custom pricing for DataCorp (Q4 deal)"
+- "Demo - Schedule - Product walkthrough for 3 stakeholders"
+- "Contract Renewal - Negotiate - TechStart annual renewal (up for renewal)"
+- "Pipeline Review - Complete - Weekly forecast with sales ops"
+
+Generate one task name:
+
+---
+
+# ============================================================================
+# OPERATIONS TASKS
+# ============================================================================
+
+## Customer Success
+Generate a realistic customer success task name.
+
+Examples:
+- "Onboarding Call - Schedule - New enterprise customer kickoff"
+- "Health Score - Review - At-risk accounts from churn model"
+- "QBR - Prepare - Quarterly business review deck for top account"
+- "Feature Request - Document - Top 5 asks from enterprise customers"
+- "Training Session - Deliver - Admin training for 20-person team"
+
+Generate one task name:
+
+---
+
+## HR/People Ops
+Generate a realistic HR or people operations task name.
+
+Examples:
+- "Recruiting - Post - Senior Backend Engineer job description"
+- "Onboarding - Coordinate - New hire setup for 5 engineers"
+- "Performance Reviews - Schedule - Q4 review cycle communications"
+- "Team Event - Plan - Engineering offsite agenda and logistics"
+- "Benefits - Update - Open enrollment materials for 2025"
+
+Generate one task name:
+
+---
+
+## Finance
+Generate a realistic finance task name.
+
+Examples:
+- "Budget Planning - Prepare - FY2025 department budget proposals"
+- "Revenue Recognition - Review - ASC 606 compliance for enterprise deals"
+- "Month-End Close - Complete - October financial statements"
+- "Audit - Coordinate - Annual SOC 2 Type II audit prep"
+- "Financial Model - Update - 3-year revenue projections for board deck"
+
+Generate one task name:
+
+---
+
+# ============================================================================
+# SUPPORT/MAINTENANCE TASKS
+# ============================================================================
+
+## Bug Fixes
+Generate a realistic bug fix task name.
+
+Examples:
+- "Critical Bug - Fix - Users unable to login via SSO (P0)"
+- "UI Bug - Resolve - Chart tooltips overlapping on mobile"
+- "Data Bug - Investigate - Missing analytics events for iOS app"
+- "Performance Bug - Fix - Dashboard loading >10 seconds for large orgs"
+- "Integration Bug - Debug - Slack notifications not sending"
+
+Generate one task name:
+
+---
+
+## Technical Debt
+Generate a realistic technical debt task name.
+
+Examples:
+- "Legacy Code - Refactor - Remove deprecated API v1 endpoints"
+- "Dependencies - Update - Upgrade React from 16.x to 18.x"
+- "Test Coverage - Add - Unit tests for payment processing module"
+- "Documentation - Update - API docs for new authentication flow"
+- "Code Quality - Fix - 50+ TypeScript any types in core modules"
+
+Generate one task name:
+
+---
+
+# ============================================================================
+# GENERAL TEMPLATES
+# ============================================================================
+
+## Generic Task (fallback)
+Generate a realistic task name for a {team_type} team working on {project_type} project.
+
+Make it specific and actionable. Include technical details if appropriate.
+
+Examples based on team type:
+- Engineering: Component-based technical tasks
+- Product: Feature planning and research tasks  
+- Marketing: Campaign and content tasks
+- Sales: Deal and pipeline tasks
+- Operations: Process and coordination tasks
+
+Generate one task name:
